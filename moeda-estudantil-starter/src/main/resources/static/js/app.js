@@ -1,68 +1,76 @@
 
 "use strict";
 
-let credenciais = null;
-let alunos = [];
-let empresas = [];
-let instituicoes = [];
-
 const $ = id => document.getElementById(id);
 
-function mostrar(elemento, visivel) {
-    elemento.classList.toggle("hidden", !visivel);
-}
+const mostrar = (id, visivel) =>
+    $(id).classList.toggle("hidden", !visivel);
 
+let sessao = null;
+let modoEdicao = false;
+
+// Mensagens
 function aviso(mensagem, erro = false) {
-    const box = $("feedback");
-    box.textContent = mensagem;
-    box.classList.toggle("error", erro);
-    mostrar(box, true);
-
-    setTimeout(() => mostrar(box, false), 5000);
+    $("feedback").textContent = mensagem;
+    $("feedback").classList.toggle("error", erro);
+    mostrar("feedback", true);
 }
 
-// Autenticacao temporaria para desenvolvimento
-function headerBasic(usuario, senha) {
-    const bytes = new TextEncoder()
-        .encode(`${usuario}:${senha}`);
+// Protecao CSRF
+function tokenCsrf() {
+    const item = document.cookie.split("; ")
+        .find(c => c.startsWith("XSRF-TOKEN="));
 
-    let binario = "";
-    bytes.forEach(byte => {
-        binario += String.fromCharCode(byte);
-    });
-
-    return `Basic ${btoa(binario)}`;
-}
-
-// Comunicacao com a API
-async function api(caminho, opcoes = {}) {
-    const headers = {
-        Accept: "application/json",
-        Authorization: credenciais,
-        ...(opcoes.headers || {})
-    };
-
-    if (opcoes.body) {
-        headers["Content-Type"] = "application/json";
-    }
-
-    let resposta;
-
-    try {
-        resposta = await fetch(caminho, {
-            ...opcoes,
-            headers,
-            cache: "no-store"
-        });
-    } catch {
+    if (!item) {
         throw new Error(
-            "Não foi possível conectar ao Spring Boot."
+            "Token de seguranca ausente. Atualize a pagina."
         );
     }
 
-    if (resposta.status === 204) {
-        return null;
+    return decodeURIComponent(
+        item.substring("XSRF-TOKEN=".length)
+    );
+}
+
+async function prepararCsrf() {
+    const resposta = await fetch("/api/auth/csrf", {
+        credentials: "same-origin",
+        cache: "no-store"
+    });
+
+    if (!resposta.ok) {
+        throw new Error("Falha ao preparar a seguranca.");
     }
+
+    tokenCsrf();
+}
+
+// Requisicoes HTTP
+async function api(caminho, opcoes = {}) {
+    const metodo = (opcoes.method || "GET").toUpperCase();
+
+    const headers = {
+        Accept: "application/json",
+        ...opcoes.headers
+    };
+
+    if (opcoes.body && typeof opcoes.body === "string") {
+        headers["Content-Type"] = "application/json";
+    }
+
+    if (!["GET", "HEAD", "OPTIONS"].includes(metodo)) {
+        headers["X-XSRF-TOKEN"] = tokenCsrf();
+    }
+
+    const resposta = await fetch(caminho, {
+        ...opcoes,
+        method: metodo,
+        headers,
+        credentials: "same-origin",
+        cache: "no-store"
+    });
+
+    if (resposta.status === 204) return null;
 
     const texto = await resposta.text();
     let dados = null;
@@ -74,297 +82,320 @@ async function api(caminho, opcoes = {}) {
     }
 
     if (!resposta.ok) {
-        if (resposta.status === 401) {
-            throw new Error("Usuário ou senha inválidos.");
-        }
-
-        const erros = dados?.erros
+        const detalhes = dados?.erros
             ? Object.entries(dados.erros)
-                .map(([campo, msg]) => `${campo}: ${msg}`)
+                .map(([c, v]) => `${c}: ${v}`)
                 .join(" | ")
-            : "";
+            : dados?.mensagem;
 
         throw new Error(
-            erros || dados?.mensagem ||
-            `Erro HTTP ${resposta.status}`
+            detalhes || `Erro HTTP ${resposta.status}`
         );
     }
 
     return dados;
 }
 
-// Login temporario
-async function conectar(evento) {
-    evento.preventDefault();
+// Painel do usuario
+function mostrarPainel() {
+    mostrar("acesso", false);
+    mostrar("cadastro", false);
+    mostrar("painel", true);
 
-    credenciais = headerBasic(
-        $("demo-user").value.trim(),
-        $("demo-pass").value
+    $("boas-vindas").textContent =
+        `Bem-vindo(a), ${sessao.nome}!`;
+
+    $("resumo-perfil").textContent =
+        `Login: ${sessao.login} | Perfil: ${sessao.perfil}`;
+
+    mostrar(
+        "editar-conta",
+        sessao.perfil !== "PROFESSOR"
     );
 
+    mostrar(
+        "excluir-conta",
+        sessao.perfil !== "PROFESSOR"
+    );
+}
+
+async function carregarPerfil() {
+    sessao = await api("/api/auth/me");
+    mostrarPainel();
+}
+
+// Login real
+async function entrar(login, senha) {
+    await prepararCsrf();
+
+    const resposta = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+            "Content-Type":
+                "application/x-www-form-urlencoded",
+            "X-XSRF-TOKEN": tokenCsrf()
+        },
+        body: new URLSearchParams({ login, senha })
+    });
+
+    if (!resposta.ok) {
+        throw new Error("Login ou senha incorretos.");
+    }
+
+    // Renova o CSRF apos autenticar
+    await prepararCsrf();
+    await carregarPerfil();
+}
+
+// Logout
+async function sair() {
     try {
-        instituicoes = await api("/api/instituicoes");
+        await api("/api/auth/logout", {
+            method: "POST"
+        });
 
-        await recarregar();
-        preencherInstituicoes();
+        sessao = null;
 
-        $("demo-pass").value = "";
-        mostrar($("acesso"), false);
-        mostrar($("app"), true);
+        $("form-login").reset();
 
-        aviso("Conectado com sucesso.");
+        mostrar("painel", false);
+        mostrar("cadastro", false);
+        mostrar("acesso", true);
+
+        await prepararCsrf();
+
+        aviso("Voce saiu da conta.");
     } catch (erro) {
-        credenciais = null;
         aviso(erro.message, true);
     }
 }
 
-function desconectar() {
-    credenciais = null;
-    alunos = [];
-    empresas = [];
-    instituicoes = [];
+// Instituicoes
+async function preencherInstituicoes() {
+    const instituicoes = await api("/api/instituicoes");
 
-    mostrar($("app"), false);
-    mostrar($("acesso"), true);
-}
-
-// Carregar dados do banco
-async function recarregar() {
-    [alunos, empresas] = await Promise.all([
-        api("/api/alunos"),
-        api("/api/empresas")
-    ]);
-
-    $("total-alunos").textContent = alunos.length;
-    $("total-empresas").textContent = empresas.length;
-
-    desenharLista("alunos", alunos);
-    desenharLista("empresas", empresas);
-}
-
-// Criar celulas da tabela
-function celula(linha, valor) {
-    const td = document.createElement("td");
-    td.textContent = valor ?? "-";
-    linha.appendChild(td);
-}
-
-// Mostrar os registros cadastrados
-function desenharLista(tipo, dados) {
-    const tbody = $(`lista-${tipo}`);
-    tbody.replaceChildren();
-
-    mostrar($(`vazio-${tipo}`), dados.length === 0);
-
-    for (const item of dados) {
-        const tr = document.createElement("tr");
-
-        celula(tr, item.nome);
-        celula(tr, item.email);
-
-        celula(
-            tr,
-            tipo === "alunos" ? item.cpf : item.cnpj
-        );
-
-        if (tipo === "alunos") {
-            celula(tr, item.instituicaoNome);
-        }
-
-        const td = document.createElement("td");
-
-        const editar = document.createElement("button");
-        editar.textContent = "Editar";
-        editar.className = "secondary";
-        editar.onclick = () => abrirFormulario(tipo, item);
-
-        const excluir = document.createElement("button");
-        excluir.textContent = "Excluir";
-        excluir.className = "danger";
-        excluir.onclick = () => excluirRegistro(tipo, item);
-
-        td.append(editar, excluir);
-        tr.appendChild(td);
-        tbody.appendChild(tr);
-    }
-}
-
-// Listagem de instituicoes
-function preencherInstituicoes() {
     const select = $("aluno-instituicao");
 
     select.replaceChildren(
-        new Option("Selecione uma instituição", "")
+        new Option("Selecione...", "")
     );
 
     for (const instituicao of instituicoes) {
-        select.add(new Option(
-            instituicao.nome,
-            String(instituicao.id)
-        ));
+        select.add(
+            new Option(
+                instituicao.nome,
+                String(instituicao.id)
+            )
+        );
     }
 }
 
-// Abrir formulario de cadastro ou edicao
-function abrirFormulario(tipo, item = null) {
-    const aluno = tipo === "alunos";
-    const prefixo = aluno ? "aluno" : "empresa";
-    const form = $(`form-${prefixo}`);
+// Cadastro e edicao
+function abrirCadastro(tipo, editar = false) {
+    modoEdicao = editar;
 
-    form.reset();
+    $("form-aluno").reset();
+    $("form-empresa").reset();
 
-    $(`${prefixo}-id`).value = item?.id ?? "";
-    $(`${prefixo}-senha`).required = !item;
+    mostrar("acesso", false);
+    mostrar("painel", false);
+    mostrar("cadastro", true);
 
-    $(`titulo-${prefixo}`).textContent =
-        item ? "Editar Cadastro" : "Novo Cadastro";
+    mostrar("form-aluno", tipo === "alunos");
+    mostrar("form-empresa", tipo === "empresas");
 
-    form.querySelector(".password-hint").textContent =
-        item
-            ? "Deixe em branco para manter a senha."
-            : "Mínimo de 8 caracteres.";
+    $("cadastro-titulo").textContent = editar
+        ? "Editar meus dados"
+        : tipo === "alunos"
+            ? "Cadastro de aluno"
+            : "Cadastro de empresa";
 
-    if (item) {
+    const prefixo = tipo === "alunos"
+        ? "aluno" : "empresa";
+
+    $(`${prefixo}-senha`).required = !editar;
+    $(`${prefixo}-login`).readOnly = editar;
+
+    $("dica-senha").textContent = editar
+        ? "Deixe a senha em branco para mante-la."
+        : "A senha precisa ter ao menos 8 caracteres.";
+}
+
+// Buscar meus dados para edicao
+async function editarConta() {
+    const tipo = sessao.perfil === "ALUNO"
+        ? "alunos" : "empresas";
+
+    try {
+        const dados = await api(
+            `/api/${tipo}/${sessao.id}`
+        );
+
+        abrirCadastro(tipo, true);
+
+        const prefixo = tipo === "alunos"
+            ? "aluno" : "empresa";
+
         const campos = [
             "nome", "email", "login",
-            ...(aluno
-                ? ["cpf", "rg", "curso", "endereco"]
+            ...(tipo === "alunos"
+                ? ["cpf", "rg", "endereco", "curso"]
                 : ["cnpj"])
         ];
 
         for (const campo of campos) {
             $(`${prefixo}-${campo}`).value =
-                item[campo] || "";
+                dados[campo] ?? "";
         }
 
-        if (aluno) {
+        if (tipo === "alunos") {
             $("aluno-instituicao").value =
-                String(item.instituicaoId);
+                String(dados.instituicaoId);
         }
+    } catch (erro) {
+        aviso(erro.message, true);
     }
-
-    mostrar(form, true);
-    form.scrollIntoView({ behavior: "smooth" });
 }
 
-function fecharFormulario(tipo) {
-    const prefixo = tipo === "alunos"
-        ? "aluno"
-        : "empresa";
-
-    const form = $(`form-${prefixo}`);
-
-    form.reset();
-    mostrar(form, false);
-}
-
-// CREATE e UPDATE
-async function salvar(tipo, evento) {
+// Cadastrar ou atualizar
+async function salvarCadastro(evento, tipo) {
     evento.preventDefault();
 
-    const aluno = tipo === "alunos";
-    const prefixo = aluno ? "aluno" : "empresa";
+    const prefixo = tipo === "alunos"
+        ? "aluno" : "empresa";
 
     const form = $(`form-${prefixo}`);
-    const id = $(`${prefixo}-id`).value;
 
     const dados = Object.fromEntries(
         new FormData(form).entries()
     );
 
-    delete dados.id;
+    const senhaDigitada = dados.senha;
 
-    dados.senha = dados.senha?.trim()
-        ? dados.senha
-        : null;
+    dados.senha = dados.senha || null;
 
-    if (aluno) {
-        dados.instituicaoId = Number(dados.instituicaoId);
+    if (tipo === "alunos") {
         dados.cpf = dados.cpf.replace(/\D/g, "");
-    } else dados.cnpj = dados.cnpj
-        .replace(/[^A-Za-z0-9]/g, '')
-        .toUpperCase();
+        dados.instituicaoId = Number(dados.instituicaoId);
+    } else {
+        dados.cnpj = dados.cnpj
+            .replace(/[^A-Za-z0-9]/g, "")
+            .toUpperCase();
+    }
+
+    const caminho = `/api/${tipo}${
+        modoEdicao ? `/${sessao.id}` : ""
+    }`;
 
     try {
-        await api(
-            `/api/${tipo}${id ? `/${id}` : ""}`,
-            {
-                method: id ? "PUT" : "POST",
-                body: JSON.stringify(dados)
-            }
-        );
+        await api(caminho, {
+            method: modoEdicao ? "PUT" : "POST",
+            body: JSON.stringify(dados)
+        });
 
-        fecharFormulario(tipo);
-        await recarregar();
+        if (modoEdicao) {
+            await carregarPerfil();
+            aviso("Cadastro atualizado.");
+        } else {
+            await entrar(dados.login, senhaDigitada);
+            aviso("Conta criada e login realizado!");
+        }
 
-        aviso("Cadastro salvo com sucesso!");
+        form.reset();
     } catch (erro) {
         aviso(erro.message, true);
     }
 }
 
-// DELETE
-async function excluirRegistro(tipo, item) {
-    if (!confirm(`Deseja excluir ${item.nome}?`)) {
-        return;
-    }
+// Excluir minha conta
+async function excluirConta() {
+    if (!confirm(
+        "Deseja excluir seu cadastro permanentemente?"
+    )) return;
+
+    const tipo = sessao.perfil === "ALUNO"
+        ? "alunos" : "empresas";
 
     try {
-        await api(`/api/${tipo}/${item.id}`, {
+        await api(`/api/${tipo}/${sessao.id}`, {
             method: "DELETE"
         });
 
-        await recarregar();
-        aviso("Registro excluído com sucesso!");
+        await sair();
+        aviso("Cadastro excluido.");
     } catch (erro) {
         aviso(erro.message, true);
     }
 }
 
-// Alternar entre alunos e empresas
-function trocarAba(tipo) {
-    for (const tab of document.querySelectorAll(".tab")) {
-        tab.classList.toggle(
-            "active",
-            tab.dataset.tab === tipo
-        );
-    }
-
-    mostrar($("painel-alunos"), tipo === "alunos");
-    mostrar($("painel-empresas"), tipo === "empresas");
-}
-
 // Eventos
-$("login-form").addEventListener("submit", conectar);
-$("logout").addEventListener("click", desconectar);
+$("form-login").addEventListener(
+    "submit", async evento => {
+        evento.preventDefault();
 
-document.querySelectorAll(".tab").forEach(tab => {
-    tab.addEventListener("click", () => {
-        trocarAba(tab.dataset.tab);
-    });
+        try {
+            await entrar(
+                $("login-usuario").value.trim(),
+                $("login-senha").value
+            );
+
+            $("login-senha").value = "";
+
+            aviso("Login realizado!");
+        } catch (erro) {
+            aviso(erro.message, true);
+        }
+    }
+);
+
+$("abrir-aluno").addEventListener(
+    "click", () => abrirCadastro("alunos")
+);
+
+$("abrir-empresa").addEventListener(
+    "click", () => abrirCadastro("empresas")
+);
+
+$("voltar").addEventListener("click", () => {
+    if (sessao) {
+        mostrarPainel();
+    } else {
+        mostrar("cadastro", false);
+        mostrar("acesso", true);
+    }
 });
 
-$("novo-aluno").addEventListener("click", () => {
-    abrirFormulario("alunos");
-});
+$("form-aluno").addEventListener(
+    "submit", e => salvarCadastro(e, "alunos")
+);
 
-$("nova-empresa").addEventListener("click", () => {
-    abrirFormulario("empresas");
-});
+$("form-empresa").addEventListener(
+    "submit", e => salvarCadastro(e, "empresas")
+);
 
-$("cancelar-aluno").addEventListener("click", () => {
-    fecharFormulario("alunos");
-});
+$("editar-conta").addEventListener(
+    "click", editarConta
+);
 
-$("cancelar-empresa").addEventListener("click", () => {
-    fecharFormulario("empresas");
-});
+$("excluir-conta").addEventListener(
+    "click", excluirConta
+);
 
-$("form-aluno").addEventListener("submit", evento => {
-    salvar("alunos", evento);
-});
+$("sair").addEventListener("click", sair);
 
-$("form-empresa").addEventListener("submit", evento => {
-    salvar("empresas", evento);
-});
+// Inicializacao
+(async () => {
+    try {
+        await prepararCsrf();
+        await preencherInstituicoes();
+
+        try {
+            await carregarPerfil();
+        } catch {
+            mostrar("acesso", true);
+        }
+    } catch (erro) {
+        aviso(erro.message, true);
+    }
+})();

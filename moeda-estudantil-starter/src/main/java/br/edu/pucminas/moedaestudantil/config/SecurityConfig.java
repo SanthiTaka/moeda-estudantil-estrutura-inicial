@@ -1,19 +1,13 @@
 
 package br.edu.pucminas.moedaestudantil.config;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
-
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,14 +23,11 @@ public class SecurityConfig {
             HttpSecurity http) throws Exception {
 
         http
-            .csrf(csrf ->
-                csrf.ignoringRequestMatchers("/api/**"))
-
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(
-                    SessionCreationPolicy.STATELESS))
+            .csrf(csrf -> csrf.spa())
 
             .authorizeHttpRequests(auth -> auth
+
+                // Interface web
                 .requestMatchers(
                     "/",
                     "/index.html",
@@ -46,20 +37,73 @@ public class SecurityConfig {
                     "/error"
                 ).permitAll()
 
-                .requestMatchers("/api/**").authenticated()
+                // Recursos publicos
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/auth/csrf",
+                    "/api/instituicoes"
+                ).permitAll()
 
+                // Cadastro publico de alunos e empresas
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/alunos",
+                    "/api/empresas"
+                ).permitAll()
+
+                // Perfil do usuario autenticado
+                .requestMatchers("/api/auth/me")
+                    .authenticated()
+
+                // Cadastros protegidos por perfil
+                .requestMatchers("/api/alunos/**")
+                    .hasRole("ALUNO")
+
+                .requestMatchers(
+                    HttpMethod.GET, "/api/alunos")
+                    .hasRole("ALUNO")
+
+                .requestMatchers("/api/empresas/**")
+                    .hasRole("EMPRESA")
+
+                .requestMatchers(
+                    HttpMethod.GET, "/api/empresas")
+                    .hasRole("EMPRESA")
+
+                // Demais operacoes serao liberadas
+                // conforme os modulos forem implementados
                 .anyRequest().denyAll()
             )
 
-            .httpBasic(basic ->
-                basic.authenticationEntryPoint(
+            .formLogin(form -> form
+                .loginProcessingUrl("/api/auth/login")
+                .usernameParameter("login")
+                .passwordParameter("senha")
+                .successHandler((req, res, auth) ->
+                    res.setStatus(HttpStatus.NO_CONTENT.value())
+                )
+                .failureHandler((req, res, ex) ->
+                    res.sendError(HttpStatus.UNAUTHORIZED.value())
+                )
+                .permitAll()
+            )
+
+            .logout(logout -> logout
+                .logoutUrl("/api/auth/logout")
+                .logoutSuccessHandler((req, res, auth) ->
+                    res.setStatus(HttpStatus.NO_CONTENT.value())
+                )
+            )
+
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(
                     new HttpStatusEntryPoint(
                         HttpStatus.UNAUTHORIZED
                     )
                 )
             )
 
-            .formLogin(AbstractHttpConfigurer::disable);
+            .httpBasic(AbstractHttpConfigurer::disable);
 
         return http.build();
     }
@@ -67,18 +111,5 @@ public class SecurityConfig {
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    UserDetailsService userDetailsService(
-            PasswordEncoder encoder,
-            @Value("${APP_DEV_PASSWORD}") String senha) {
-
-        UserDetails usuario = User.withUsername("user")
-                .password(encoder.encode(senha))
-                .roles("ADMIN")
-                .build();
-
-        return new InMemoryUserDetailsManager(usuario);
     }
 }
