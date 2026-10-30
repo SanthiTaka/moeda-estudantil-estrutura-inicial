@@ -9,6 +9,7 @@ import br.edu.pucminas.moedaestudantil.dto.response.EmpresaParceiraResponse;
 import br.edu.pucminas.moedaestudantil.exception.ConflitoCadastroException;
 import br.edu.pucminas.moedaestudantil.model.entity.EmpresaParceira;
 import br.edu.pucminas.moedaestudantil.model.repository.EmpresaParceiraRepository;
+import br.edu.pucminas.moedaestudantil.model.validation.DocumentoValidator;
 
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -80,7 +81,13 @@ public class EmpresaParceiraService {
 
         String email = d.email().trim().toLowerCase();
         String login = d.login().trim().toLowerCase();
-        String cnpj = d.cnpj().trim();
+        String cnpj = d.cnpj().trim().toUpperCase();
+
+if (!DocumentoValidator.cnpjValido(cnpj)) {
+    throw new IllegalArgumentException(
+        "CNPJ invalido. Verifique os caracteres informados."
+    );
+}
 
         validacao.conferirUnicidade(
                 email, login, novo ? null : empresa);

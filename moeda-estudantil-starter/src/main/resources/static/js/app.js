@@ -282,9 +282,9 @@ async function salvar(tipo, evento) {
     if (aluno) {
         dados.instituicaoId = Number(dados.instituicaoId);
         dados.cpf = dados.cpf.replace(/\D/g, "");
-    } else {
-        dados.cnpj = dados.cnpj.replace(/\D/g, "");
-    }
+    } else dados.cnpj = dados.cnpj
+        .replace(/[^A-Za-z0-9]/g, '')
+        .toUpperCase();
 
     try {
         await api(

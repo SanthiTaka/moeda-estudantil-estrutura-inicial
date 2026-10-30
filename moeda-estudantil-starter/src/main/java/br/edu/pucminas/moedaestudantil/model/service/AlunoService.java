@@ -11,6 +11,7 @@ import br.edu.pucminas.moedaestudantil.model.entity.Aluno;
 import br.edu.pucminas.moedaestudantil.model.entity.Instituicao;
 import br.edu.pucminas.moedaestudantil.model.repository.AlunoRepository;
 import br.edu.pucminas.moedaestudantil.model.repository.InstituicaoRepository;
+import br.edu.pucminas.moedaestudantil.model.validation.DocumentoValidator;
 
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -78,6 +79,11 @@ public class AlunoService {
         String email = d.email().trim().toLowerCase();
         String login = d.login().trim().toLowerCase();
         String cpf = d.cpf().trim();
+        if (!DocumentoValidator.cpfValido(cpf)) {
+    throw new IllegalArgumentException(
+        "CPF invalido. Verifique os digitos informados."
+    );
+}
         String rg = d.rg().trim();
 
         validacao.conferirUnicidade(
