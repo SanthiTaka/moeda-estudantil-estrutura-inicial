@@ -1,15 +1,273 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Moeda Estudantil</title>
-  <link rel="stylesheet" href="/css/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Moeda Estudantil - Cadastros</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script defer src="/js/app.js"></script>
 </head>
 <body>
-  <main>
-    <h1>🪙 Sistema de Moeda Estudantil</h1>
-    <p>Estrutura inicial do projeto. As telas e as APIs serao desenvolvidas por etapas.</p>
-  </main>
+
+<header>
+    <div class="container">
+        <h1>🪙 Moeda Estudantil</h1>
+        <p>Sistema de reconhecimento estudantil</p>
+    </div>
+</header>
+
+<main class="container">
+
+    <section id="acesso" class="card">
+        <h2>Acesso ao ambiente de desenvolvimento</h2>
+        <p>Utilize as credenciais temporárias do Spring Boot.</p>
+
+        <form id="login-form">
+            <div class="form-grid">
+                <label>
+                    Usuário
+                    <input id="demo-user" value="user" required>
+                </label>
+
+                <label>
+                    Senha
+                    <input id="demo-pass" type="password" required>
+                </label>
+            </div>
+
+            <button id="login-button" type="submit">
+                Conectar
+            </button>
+        </form>
+    </section>
+
+    <section id="app" class="hidden">
+
+        <div class="toolbar">
+            <h2>Gerenciamento de Cadastros</h2>
+            <button id="logout" type="button">
+                Desconectar
+            </button>
+        </div>
+
+        <div class="stats">
+            <div class="card">
+                <h3>Alunos cadastrados</h3>
+                <strong id="total-alunos">0</strong>
+            </div>
+
+            <div class="card">
+                <h3>Empresas parceiras</h3>
+                <strong id="total-empresas">0</strong>
+            </div>
+        </div>
+
+        <nav class="tabs">
+            <button class="tab active" data-tab="alunos">
+                Alunos
+            </button>
+
+            <button class="tab" data-tab="empresas">
+                Empresas Parceiras
+            </button>
+        </nav>
+
+        <!-- CADASTRO DE ALUNOS -->
+
+        <section id="painel-alunos" class="card">
+
+            <div class="toolbar">
+                <h2>Alunos</h2>
+                <button id="novo-aluno" type="button">
+                    + Novo Aluno
+                </button>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>E-mail</th>
+                            <th>CPF</th>
+                            <th>Instituição</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-alunos"></tbody>
+                </table>
+            </div>
+
+            <p id="vazio-alunos" class="hidden">
+                Nenhum aluno cadastrado.
+            </p>
+
+            <form id="form-aluno" class="hidden">
+
+                <h3 id="titulo-aluno">Novo Aluno</h3>
+                <input type="hidden" id="aluno-id" name="id">
+
+                <div class="form-grid">
+
+                    <label>Nome
+                        <input id="aluno-nome"
+                               name="nome" required>
+                    </label>
+
+                    <label>E-mail
+                        <input id="aluno-email"
+                               name="email"
+                               type="email" required>
+                    </label>
+
+                    <label>Login
+                        <input id="aluno-login"
+                               name="login" required>
+                    </label>
+
+                    <label>Senha
+                        <input id="aluno-senha"
+                               name="senha"
+                               type="password"
+                               minlength="8">
+                        <small class="password-hint"></small>
+                    </label>
+
+                    <label>CPF (11 números)
+                        <input id="aluno-cpf"
+                               name="cpf"
+                               pattern="[0-9]{11}"
+                               maxlength="11" required>
+                    </label>
+
+                    <label>RG
+                        <input id="aluno-rg"
+                               name="rg" required>
+                    </label>
+
+                    <label>Curso
+                        <input id="aluno-curso"
+                               name="curso" required>
+                    </label>
+
+                    <label>Instituição de Ensino
+                        <select id="aluno-instituicao"
+                                name="instituicaoId" required>
+                            <option value="">Selecione</option>
+                        </select>
+                    </label>
+
+                    <label class="full">Endereço
+                        <input id="aluno-endereco"
+                               name="endereco" required>
+                    </label>
+
+                </div>
+
+                <div class="actions">
+                    <button id="salvar-aluno" type="submit">
+                        Salvar Aluno
+                    </button>
+                    <button id="cancelar-aluno"
+                            type="button" class="secondary">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- CADASTRO DE EMPRESAS -->
+
+        <section id="painel-empresas" class="card hidden">
+
+            <div class="toolbar">
+                <h2>Empresas Parceiras</h2>
+                <button id="nova-empresa" type="button">
+                    + Nova Empresa
+                </button>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Empresa</th>
+                            <th>E-mail</th>
+                            <th>CNPJ</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-empresas"></tbody>
+                </table>
+            </div>
+
+            <p id="vazio-empresas" class="hidden">
+                Nenhuma empresa cadastrada.
+            </p>
+
+            <form id="form-empresa" class="hidden">
+
+                <h3 id="titulo-empresa">Nova Empresa</h3>
+                <input type="hidden" id="empresa-id" name="id">
+
+                <div class="form-grid">
+
+                    <label>Nome da Empresa
+                        <input id="empresa-nome"
+                               name="nome" required>
+                    </label>
+
+                    <label>E-mail
+                        <input id="empresa-email"
+                               name="email"
+                               type="email" required>
+                    </label>
+
+                    <label>Login
+                        <input id="empresa-login"
+                               name="login" required>
+                    </label>
+
+                    <label>Senha
+                        <input id="empresa-senha"
+                               name="senha"
+                               type="password"
+                               minlength="8">
+                        <small class="password-hint"></small>
+                    </label>
+
+                    <label class="full">CNPJ (14 números)
+                        <input id="empresa-cnpj"
+                               name="cnpj"
+                               pattern="[0-9]{14}"
+                               maxlength="14" required>
+                    </label>
+
+                </div>
+
+                <div class="actions">
+                    <button id="salvar-empresa" type="submit">
+                        Salvar Empresa
+                    </button>
+                    <button id="cancelar-empresa"
+                            type="button" class="secondary">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </section>
+
+    </section>
+
+    <div id="feedback" class="feedback hidden"
+         role="status"></div>
+
+</main>
+
+<footer>
+    PUC Minas - Projeto de Software - Sistema de Moeda Estudantil
+</footer>
+
 </body>
 </html>

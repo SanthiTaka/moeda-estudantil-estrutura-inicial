@@ -1,9 +1,32 @@
+
 package br.edu.pucminas.moedaestudantil.controller;
 
-import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
-/** Estrutura inicial: nenhuma rota HTTP esta implementada. */
+import br.edu.pucminas.moedaestudantil.dto.response.InstituicaoResponse;
+import br.edu.pucminas.moedaestudantil.model.repository.InstituicaoRepository;
+
+import org.springframework.data.domain.Sort;
+import org.springframework.web.bind.annotation.*;
+
 @RestController
+@RequestMapping("/api/instituicoes")
 public class InstituicaoController {
-    // TODO: criar endpoints e delegar aos Services (nao acessar Repository diretamente).
+
+    private final InstituicaoRepository repository;
+
+    public InstituicaoController(InstituicaoRepository repository) {
+        this.repository = repository;
+    }
+
+    @GetMapping
+    public List<InstituicaoResponse> listar() {
+        return repository.findAll(Sort.by("nome"))
+                .stream()
+                .map(i -> new InstituicaoResponse(
+                        i.getId(),
+                        i.getNome()
+                ))
+                .toList();
+    }
 }
