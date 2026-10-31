@@ -9,8 +9,14 @@
             "mainClass": "br.edu.pucminas.moedaestudantil.MoedaEstudantilApplication",
             "cwd": "${workspaceFolder}/moeda-estudantil-starter",
             "env": {
-                "APP_DEV_PASSWORD": "TesteMoeda2026!"
+                "APP_DEV_PASSWORD": "TesteMoeda2026!",
+                
+"APP_PROFESSOR_DEMO_ENABLED": "true",
+"APP_PROFESSOR_DEMO_SENHA": "ProfessorTeste2026!"
+
+                
             }
+            
         }
     ]
 }

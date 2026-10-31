@@ -45,4 +45,22 @@ public class Transacao {
 
     public LocalDateTime getData() { return data; }
     public void setData(LocalDateTime data) { this.data = data; }
+    @Column(name = "periodo_semestre", length = 8)
+private String periodoSemestre;
+public String getPeriodoSemestre() {
+    return periodoSemestre;
+}
+
+public void setPeriodoSemestre(String periodoSemestre) {
+    this.periodoSemestre = periodoSemestre;
+}
+@Column(name = "operacao_id", length = 36)
+private String operacaoId;
+public String getOperacaoId() {
+    return operacaoId;
+}
+
+public void setOperacaoId(String operacaoId) {
+    this.operacaoId = operacaoId;
+}
 }

@@ -72,6 +72,19 @@ public class SecurityConfig {
 
                 // Demais operacoes serao liberadas
                 // conforme os modulos forem implementados
+                
+.requestMatchers(
+    HttpMethod.GET, "/api/extratos/me"
+).hasAnyRole("ALUNO", "PROFESSOR")
+
+.requestMatchers(
+    HttpMethod.GET, "/api/moedas/alunos"
+).hasRole("PROFESSOR")
+
+.requestMatchers(
+    HttpMethod.POST, "/api/moedas/enviar"
+).hasRole("PROFESSOR")
+
                 .anyRequest().denyAll()
             )
 

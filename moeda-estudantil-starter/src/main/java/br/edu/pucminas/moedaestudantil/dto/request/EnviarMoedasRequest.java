@@ -1,4 +1,19 @@
+
 package br.edu.pucminas.moedaestudantil.dto.request;
 
-/** DTO inicial: ajustar validacoes e campos na implementacao. */
-public record EnviarMoedasRequest(Long alunoId, Integer quantidade, String motivo) {}
+import jakarta.validation.constraints.*;
+
+public record EnviarMoedasRequest(
+
+    @NotNull
+    Long alunoId,
+
+    @NotNull
+    @Positive
+    Integer quantidade,
+
+    @NotBlank
+    @Size(max = 500)
+    String motivo
+
+) {}

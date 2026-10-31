@@ -222,6 +222,88 @@
             </button>
         </div>
 
+<section id="area-moedas" class="hidden">
+
+    <hr>
+
+    <h3>Minha Carteira</h3>
+
+    <div class="carteira">
+        <span>Saldo disponível</span>
+        <strong id="saldo-moedas">0 moedas</strong>
+    </div>
+
+    <!-- Somente professores -->
+    <div id="area-envio" class="hidden">
+
+        <h3>Enviar moedas para aluno</h3>
+
+        <form id="form-envio">
+
+            <div class="form-grid">
+                <div class="field">
+                    <label for="destino-aluno">
+                        Selecione o aluno
+                    </label>
+                    <select id="destino-aluno" required>
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="quantidade-moedas">
+                        Quantidade de moedas
+                    </label>
+                    <input id="quantidade-moedas"
+                           type="number"
+                           min="1"
+                           step="1"
+                           required>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="motivo-moedas">
+                    Motivo do reconhecimento
+                </label>
+                <textarea id="motivo-moedas"
+                          maxlength="500"
+                          rows="3"
+                          required></textarea>
+            </div>
+
+            <button class="btn primary" type="submit">
+                Enviar Moedas
+            </button>
+        </form>
+    </div>
+
+    <hr>
+
+    <h3>Meu Extrato</h3>
+
+    <button class="btn outline"
+            id="atualizar-extrato"
+            type="button">
+        Atualizar Extrato
+    </button>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Operação</th>
+                    <th>Quantidade</th>
+                    <th>Motivo</th>
+                </tr>
+            </thead>
+
+            <tbody id="lista-transacoes"></tbody>
+        </table>
+    </div>
+</section>
+
     </section>
 
     <div id="feedback"

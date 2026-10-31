@@ -1,9 +1,40 @@
+
 package br.edu.pucminas.moedaestudantil.controller;
 
-import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
-/** Estrutura inicial: nenhuma rota HTTP esta implementada. */
+import br.edu.pucminas.moedaestudantil.dto.request.EnviarMoedasRequest;
+import br.edu.pucminas.moedaestudantil.dto.response.AlunoDestinoResponse;
+import br.edu.pucminas.moedaestudantil.model.service.MoedaService;
+
+import jakarta.validation.Valid;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
 @RestController
+@RequestMapping("/api/moedas")
 public class MoedaController {
-    // TODO: criar endpoints e delegar aos Services (nao acessar Repository diretamente).
+
+    private final MoedaService service;
+
+    public MoedaController(MoedaService service) {
+        this.service = service;
+    }
+
+    @GetMapping("/alunos")
+    public List<AlunoDestinoResponse> listarAlunos() {
+        return service.listarAlunos();
+    }
+
+    @PostMapping("/enviar")
+    public ResponseEntity<Void> enviar(
+            Authentication authentication,
+            @Valid @RequestBody EnviarMoedasRequest dados) {
+
+        service.enviar(authentication.getName(), dados);
+
+        return ResponseEntity.noContent().build();
+    }
 }

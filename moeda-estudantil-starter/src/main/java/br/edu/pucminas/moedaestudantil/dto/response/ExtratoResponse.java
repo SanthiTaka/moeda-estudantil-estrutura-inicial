@@ -1,4 +1,9 @@
+
 package br.edu.pucminas.moedaestudantil.dto.response;
 
-/** DTO inicial: ajustar validacoes e campos na implementacao. */
-public record ExtratoResponse(Integer saldo) {}
+import java.util.List;
+
+public record ExtratoResponse(
+    Integer saldo,
+    List<TransacaoResponse> transacoes
+) {}

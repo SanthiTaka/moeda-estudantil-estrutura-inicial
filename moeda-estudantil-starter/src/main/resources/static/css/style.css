@@ -187,3 +187,50 @@ footer {
         align-items: flex-start;
     }
 }
+
+
+/* Carteira de moedas */
+
+.carteira {
+    background: #eef3ff;
+    border-radius: 12px;
+    padding: 24px;
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.carteira span {
+    color: #52617d;
+    font-size: 14px;
+}
+
+.carteira strong {
+    color: #284ed2;
+    font-size: 32px;
+}
+
+#area-envio {
+    margin: 25px 0;
+}
+
+#area-envio textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd3e1;
+    border-radius: 7px;
+    font: inherit;
+    resize: vertical;
+}
+
+#area-moedas hr {
+    border: 0;
+    border-top: 1px solid #e3e7f0;
+    margin: 24px 0;
+}
+
+#lista-transacoes td:nth-child(3) {
+    font-weight: bold;
+}
+

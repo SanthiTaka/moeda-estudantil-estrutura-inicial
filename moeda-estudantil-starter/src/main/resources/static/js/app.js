@@ -119,10 +119,13 @@ function mostrarPainel() {
     );
 }
 
+
 async function carregarPerfil() {
     sessao = await api("/api/auth/me");
     mostrarPainel();
+    await carregarCarteira();
 }
+
 
 // Login real
 async function entrar(login, senha) {
@@ -399,3 +402,166 @@ $("sair").addEventListener("click", sair);
         aviso(erro.message, true);
     }
 })();
+
+
+// CARTEIRA E EXTRATO
+
+async function carregarCarteira() {
+
+    const possuiConta =
+        sessao && ["ALUNO", "PROFESSOR"]
+            .includes(sessao.perfil);
+
+    mostrar("area-moedas", possuiConta);
+
+    if (!possuiConta) return;
+
+    mostrar(
+        "area-envio",
+        sessao.perfil === "PROFESSOR"
+    );
+
+    const extrato = await api("/api/extratos/me");
+
+    $("saldo-moedas").textContent =
+        `${extrato.saldo} moedas`;
+
+    const tbody = $("lista-transacoes");
+    tbody.replaceChildren();
+
+    for (const t of extrato.transacoes) {
+
+        const linha = document.createElement("tr");
+
+        const data = document.createElement("td");
+        data.textContent =
+            new Date(t.data).toLocaleString("pt-BR");
+
+        const tipo = document.createElement("td");
+        tipo.textContent = t.tipo.replaceAll("_", " ");
+
+        const valor = document.createElement("td");
+        valor.textContent =
+            `${t.valor > 0 ? "+" : ""}${t.valor}`;
+
+        const motivo = document.createElement("td");
+        motivo.textContent = t.motivo || "-";
+
+        linha.append(data, tipo, valor, motivo);
+        tbody.appendChild(linha);
+    }
+
+    if (extrato.transacoes.length === 0) {
+        const linha = document.createElement("tr");
+        const celula = document.createElement("td");
+
+        celula.colSpan = 4;
+        celula.textContent =
+            "Nenhuma movimentação registrada.";
+
+        linha.appendChild(celula);
+        tbody.appendChild(linha);
+    }
+
+    if (sessao.perfil === "PROFESSOR") {
+        await carregarAlunosDestino();
+    }
+}
+
+// Alunos disponiveis para recebimento
+
+async function carregarAlunosDestino() {
+
+    const alunos = await api("/api/moedas/alunos");
+
+    const select = $("destino-aluno");
+
+    select.replaceChildren(
+        new Option("Selecione um aluno...", "")
+    );
+
+    for (const aluno of alunos) {
+        select.add(
+            new Option(
+                aluno.nome,
+                String(aluno.id)
+            )
+        );
+    }
+}
+
+// Envio de moedas
+
+async function enviarMoedas(evento) {
+    evento.preventDefault();
+
+    const alunoId = Number(
+        $("destino-aluno").value
+    );
+
+    const quantidade = Number(
+        $("quantidade-moedas").value
+    );
+
+    const motivo = $("motivo-moedas").value.trim();
+
+    if (!alunoId ||
+        !Number.isSafeInteger(quantidade) ||
+        quantidade <= 0 ||
+        !motivo) {
+
+        aviso("Preencha os campos corretamente.", true);
+        return;
+    }
+
+    if (!confirm(
+        `Confirma o envio de ${quantidade} moedas?`
+    )) {
+        return;
+    }
+
+    const botao = document.querySelector(
+        "#form-envio button[type='submit']"
+    );
+
+    botao.disabled = true;
+
+    try {
+        await api("/api/moedas/enviar", {
+            method: "POST",
+            body: JSON.stringify({
+                alunoId,
+                quantidade,
+                motivo
+            })
+        });
+
+        $("form-envio").reset();
+
+        await carregarCarteira();
+
+        aviso("Moedas enviadas com sucesso!");
+    } catch (erro) {
+        aviso(erro.message, true);
+    } finally {
+        botao.disabled = false;
+    }
+}
+
+// Eventos
+
+$("form-envio").addEventListener(
+    "submit", enviarMoedas
+);
+
+$("atualizar-extrato").addEventListener(
+    "click", async () => {
+        try {
+            await carregarCarteira();
+            aviso("Extrato atualizado.");
+        } catch (erro) {
+            aviso(erro.message, true);
+        }
+    }
+);
+
