@@ -73,6 +73,17 @@ public class SecurityConfig {
                 // Demais operacoes serao liberadas
                 // conforme os modulos forem implementados
                 
+// Consulta dos proprios cupons
+.requestMatchers(
+    HttpMethod.GET, "/api/resgates/me"
+).hasRole("ALUNO")
+
+// Criacao de um resgate
+.requestMatchers(
+    HttpMethod.POST, "/api/resgates"
+).hasRole("ALUNO")
+
+                
 .requestMatchers(
     HttpMethod.GET, "/api/extratos/me"
 ).hasAnyRole("ALUNO", "PROFESSOR")

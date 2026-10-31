@@ -121,25 +121,26 @@ function mostrarPainel() {
 
 
 
+
 async function carregarPerfil() {
+
     sessao = await api("/api/auth/me");
 
     mostrarPainel();
 
     await carregarCarteira();
 
-    // Carrega as vantagens sem bloquear o login
-    // caso o catalogo apresente algum erro.
     try {
         await carregarVantagens();
+        await carregarMeusResgates();
     } catch (erro) {
         aviso(
-            "Nao foi possivel carregar vantagens: " +
-            erro.message,
+            "Erro ao carregar dados: " + erro.message,
             true
         );
     }
 }
+
 
 
 
@@ -699,6 +700,53 @@ async function carregarVantagens() {
             card.appendChild(acoes);
         }
 
+// Botao exclusivo de alunos
+if (sessao.perfil === "ALUNO") {
+
+    const botaoResgatar =
+        document.createElement("button");
+
+    botaoResgatar.type = "button";
+    botaoResgatar.className = "btn primary";
+    botaoResgatar.textContent = "Resgatar vantagem";
+
+    botaoResgatar.addEventListener("click", async () => {
+
+        const confirmado = confirm(
+            `Deseja gastar ${vantagem.custoMoedas} moedas ` +
+            `para resgatar "${vantagem.descricao}"?`
+        );
+
+        if (!confirmado) return;
+
+        botaoResgatar.disabled = true;
+
+        try {
+            const resgate = await api("/api/resgates", {
+                method: "POST",
+                body: JSON.stringify({
+                    vantagemId: vantagem.id
+                })
+            });
+
+            await carregarCarteira();
+            await carregarMeusResgates();
+
+            aviso(
+                "Resgate realizado! Seu cupom: " +
+                resgate.codigoCupom
+            );
+
+        } catch (erro) {
+            aviso(erro.message, true);
+        } finally {
+            botaoResgatar.disabled = false;
+        }
+    });
+
+    card.appendChild(botaoResgatar);
+}
+
         lista.appendChild(card);
     }
 }
@@ -807,4 +855,86 @@ $("form-vantagem").addEventListener(
 $("cancelar-edicao-vantagem").addEventListener(
     "click", limparFormularioVantagem
 );
+
+
+// =====================================
+// MEUS RESGATES E CUPONS
+// =====================================
+
+async function carregarMeusResgates() {
+
+    const aluno = sessao && sessao.perfil === "ALUNO";
+
+    mostrar("area-resgates", aluno);
+
+    if (!aluno) return;
+
+    const resgates = await api("/api/resgates/me");
+
+    const lista = $("lista-resgates");
+    lista.replaceChildren();
+
+    if (resgates.length === 0) {
+        const mensagem = document.createElement("p");
+
+        mensagem.textContent =
+            "Você ainda não resgatou nenhuma vantagem.";
+
+        lista.appendChild(mensagem);
+        return;
+    }
+
+    for (const resgate of resgates) {
+
+        const card = document.createElement("article");
+        card.className = "vantagem-card";
+
+        const titulo = document.createElement("h3");
+        titulo.textContent = resgate.descricao;
+
+        const empresa = document.createElement("p");
+        empresa.textContent =
+            "Empresa: " + resgate.empresaNome;
+
+        const custo = document.createElement("p");
+        custo.textContent =
+            "Custo: " + resgate.custoMoedas + " moedas";
+
+        const data = document.createElement("p");
+        data.textContent =
+            "Resgatado em: " +
+            new Date(resgate.data).toLocaleString("pt-BR");
+
+        const label = document.createElement("strong");
+        label.textContent = "Código do cupom:";
+
+        const codigo = document.createElement("code");
+        codigo.className = "codigo-cupom";
+        codigo.textContent = resgate.codigoCupom;
+
+        card.append(
+            titulo,
+            empresa,
+            custo,
+            data,
+            label,
+            codigo
+        );
+
+        lista.appendChild(card);
+    }
+}
+
+$("atualizar-cupons").addEventListener(
+    "click", async () => {
+
+        try {
+            await carregarMeusResgates();
+            aviso("Cupons atualizados.");
+        } catch (erro) {
+            aviso(erro.message, true);
+        }
+    }
+);
+
 

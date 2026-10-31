@@ -293,3 +293,30 @@ footer {
 }
 
 
+/* Cupons resgatados */
+
+#area-resgates {
+    margin-top: 28px;
+}
+
+.codigo-cupom {
+    display: block;
+    padding: 12px;
+    background: #eef3ff;
+    border: 1px dashed #7b91d8;
+    border-radius: 8px;
+
+    color: #284ed2;
+    font-size: 13px;
+    font-weight: bold;
+
+    overflow-wrap: anywhere;
+    user-select: all;
+}
+
+#lista-resgates {
+    margin-top: 20px;
+}
+
+
+
