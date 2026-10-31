@@ -149,8 +149,11 @@ public class MoedaService {
         );
 
         notificacaoService.registrarRecebimento(
-            aluno, quantidade
-        );
+    aluno,
+    quantidade,
+    motivo,
+    usuario.getNome()
+);
     }
 
     private void registrar(

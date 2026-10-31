@@ -81,6 +81,33 @@ public class SecurityConfig {
     HttpMethod.GET, "/api/moedas/alunos"
 ).hasRole("PROFESSOR")
 
+
+// Empresa consulta somente suas vantagens
+.requestMatchers(
+    HttpMethod.GET, "/api/vantagens/minhas"
+).hasRole("EMPRESA")
+
+// Alunos e empresas consultam o catalogo
+.requestMatchers(
+    HttpMethod.GET,
+    "/api/vantagens",
+    "/api/vantagens/*"
+).hasAnyRole("ALUNO", "EMPRESA")
+
+// Somente empresas gerenciam vantagens
+.requestMatchers(
+    HttpMethod.POST, "/api/vantagens"
+).hasRole("EMPRESA")
+
+.requestMatchers(
+    HttpMethod.PUT, "/api/vantagens/*"
+).hasRole("EMPRESA")
+
+.requestMatchers(
+    HttpMethod.DELETE, "/api/vantagens/*"
+).hasRole("EMPRESA")
+
+
 .requestMatchers(
     HttpMethod.POST, "/api/moedas/enviar"
 ).hasRole("PROFESSOR")

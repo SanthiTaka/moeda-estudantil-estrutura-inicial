@@ -302,6 +302,86 @@
             <tbody id="lista-transacoes"></tbody>
         </table>
     </div>
+    
+<section id="area-vantagens" class="hidden">
+
+    <hr>
+
+    <h2 id="titulo-vantagens">Vantagens disponíveis</h2>
+
+    <!-- Formulario visivel apenas para empresas -->
+    <div id="gerenciar-vantagens" class="hidden">
+
+        <h3>Cadastrar vantagem</h3>
+
+        <form id="form-vantagem">
+
+            <div class="form-grid">
+
+                <div class="field">
+                    <label for="vantagem-descricao">
+                        Descrição
+                    </label>
+
+                    <input id="vantagem-descricao"
+                           maxlength="255"
+                           minlength="5"
+                           required>
+                </div>
+
+                <div class="field">
+                    <label for="vantagem-custo">
+                        Custo em moedas
+                    </label>
+
+                    <input id="vantagem-custo"
+                           type="number"
+                           min="1"
+                           max="1000000"
+                           step="1"
+                           required>
+                </div>
+
+                <div class="field">
+                    <label for="vantagem-foto">
+                        Link HTTPS da imagem
+                    </label>
+
+                    <input id="vantagem-foto"
+                           type="url"
+                           maxlength="255"
+                           pattern="https://.*"
+                           placeholder="https://exemplo.com/foto.jpg"
+                           required>
+                </div>
+
+            </div>
+
+            <div class="form-actions">
+
+                <button class="btn primary"
+                        type="submit"
+                        id="salvar-vantagem">
+                    Cadastrar vantagem
+                </button>
+
+                <button class="btn outline hidden"
+                        type="button"
+                        id="cancelar-edicao-vantagem">
+                    Cancelar edição
+                </button>
+
+            </div>
+
+        </form>
+
+        <hr>
+    </div>
+
+    <div id="lista-vantagens" class="vantagens-grid"></div>
+
+</section>
+
 </section>
 
     </section>

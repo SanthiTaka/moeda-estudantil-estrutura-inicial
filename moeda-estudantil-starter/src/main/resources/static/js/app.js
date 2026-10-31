@@ -120,11 +120,27 @@ function mostrarPainel() {
 }
 
 
+
 async function carregarPerfil() {
     sessao = await api("/api/auth/me");
+
     mostrarPainel();
+
     await carregarCarteira();
+
+    // Carrega as vantagens sem bloquear o login
+    // caso o catalogo apresente algum erro.
+    try {
+        await carregarVantagens();
+    } catch (erro) {
+        aviso(
+            "Nao foi possivel carregar vantagens: " +
+            erro.message,
+            true
+        );
+    }
 }
+
 
 
 // Login real
@@ -563,5 +579,232 @@ $("atualizar-extrato").addEventListener(
             aviso(erro.message, true);
         }
     }
+);
+
+
+// =====================================
+// CATALOGO DE VANTAGENS
+// =====================================
+
+let vantagemEmEdicao = null;
+
+async function carregarVantagens() {
+
+    const perfilPermitido =
+        sessao && ["ALUNO", "EMPRESA"]
+            .includes(sessao.perfil);
+
+    mostrar("area-vantagens", perfilPermitido);
+
+    if (!perfilPermitido) return;
+
+    const empresa = sessao.perfil === "EMPRESA";
+
+    mostrar("gerenciar-vantagens", empresa);
+
+    $("titulo-vantagens").textContent = empresa
+        ? "Minhas vantagens"
+        : "Vantagens disponíveis";
+
+    const url = empresa
+        ? "/api/vantagens/minhas"
+        : "/api/vantagens";
+
+    const vantagens = await api(url);
+
+    const lista = $("lista-vantagens");
+
+    lista.replaceChildren();
+
+    if (vantagens.length === 0) {
+        const mensagem = document.createElement("p");
+
+        mensagem.textContent = empresa
+            ? "Você ainda não cadastrou vantagens."
+            : "Nenhuma vantagem disponível no momento.";
+
+        lista.appendChild(mensagem);
+        return;
+    }
+
+    for (const vantagem of vantagens) {
+
+        const card = document.createElement("article");
+        card.className = "vantagem-card";
+
+        const foto = document.createElement("img");
+
+        foto.src = vantagem.foto;
+        foto.alt = vantagem.descricao;
+        foto.loading = "lazy";
+        foto.referrerPolicy = "no-referrer";
+        foto.className = "vantagem-imagem";
+
+        const descricao = document.createElement("h3");
+        descricao.textContent = vantagem.descricao;
+
+        const nomeEmpresa = document.createElement("p");
+        nomeEmpresa.textContent =
+            "Empresa: " + vantagem.empresaNome;
+
+        const custo = document.createElement("strong");
+        custo.className = "vantagem-preco";
+        custo.textContent =
+            vantagem.custoMoedas + " moedas";
+
+        card.append(foto, descricao, nomeEmpresa, custo);
+
+        if (empresa) {
+
+            const acoes = document.createElement("div");
+            acoes.className = "form-actions";
+
+            const editar = document.createElement("button");
+            editar.type = "button";
+            editar.className = "btn outline";
+            editar.textContent = "Editar";
+
+            editar.addEventListener("click", () => {
+                editarVantagem(vantagem);
+            });
+
+            const excluir = document.createElement("button");
+            excluir.type = "button";
+            excluir.className = "btn danger";
+            excluir.textContent = "Excluir";
+
+            excluir.addEventListener("click", async () => {
+
+                if (!confirm(
+                    "Deseja excluir esta vantagem?"
+                )) return;
+
+                try {
+                    await api(
+                        `/api/vantagens/${vantagem.id}`,
+                        { method: "DELETE" }
+                    );
+
+                    limparFormularioVantagem();
+
+                    await carregarVantagens();
+
+                    aviso("Vantagem excluída.");
+                } catch (erro) {
+                    aviso(erro.message, true);
+                }
+            });
+
+            acoes.append(editar, excluir);
+            card.appendChild(acoes);
+        }
+
+        lista.appendChild(card);
+    }
+}
+
+// Preenche o formulario para edicao
+
+function editarVantagem(vantagem) {
+
+    vantagemEmEdicao = vantagem.id;
+
+    $("vantagem-descricao").value = vantagem.descricao;
+    $("vantagem-custo").value = vantagem.custoMoedas;
+    $("vantagem-foto").value = vantagem.foto;
+
+    $("salvar-vantagem").textContent =
+        "Salvar alterações";
+
+    mostrar("cancelar-edicao-vantagem", true);
+
+    $("form-vantagem").scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
+}
+
+// Limpa o formulario
+
+function limparFormularioVantagem() {
+
+    vantagemEmEdicao = null;
+
+    $("form-vantagem").reset();
+
+    $("salvar-vantagem").textContent =
+        "Cadastrar vantagem";
+
+    mostrar("cancelar-edicao-vantagem", false);
+}
+
+// Cadastra ou atualiza
+
+async function salvarVantagem(evento) {
+
+    evento.preventDefault();
+
+    if (!sessao || sessao.perfil !== "EMPRESA") {
+        aviso("Acesso não permitido.", true);
+        return;
+    }
+
+    const dados = {
+        descricao: $("vantagem-descricao").value.trim(),
+        foto: $("vantagem-foto").value.trim(),
+        custoMoedas: Number(
+            $("vantagem-custo").value
+        )
+    };
+
+    if (!Number.isSafeInteger(dados.custoMoedas)
+            || dados.custoMoedas < 1) {
+
+        aviso("Informe um custo válido.", true);
+        return;
+    }
+
+    const editando = vantagemEmEdicao !== null;
+
+    const url = editando
+        ? `/api/vantagens/${vantagemEmEdicao}`
+        : "/api/vantagens";
+
+    const botao = $("salvar-vantagem");
+
+    botao.disabled = true;
+
+    try {
+
+        await api(url, {
+            method: editando ? "PUT" : "POST",
+            body: JSON.stringify(dados)
+        });
+
+        limparFormularioVantagem();
+
+        await carregarVantagens();
+
+        aviso(
+            editando
+                ? "Vantagem atualizada com sucesso!"
+                : "Vantagem cadastrada com sucesso!"
+        );
+
+    } catch (erro) {
+        aviso(erro.message, true);
+    } finally {
+        botao.disabled = false;
+    }
+}
+
+// Eventos do formulario
+
+$("form-vantagem").addEventListener(
+    "submit", salvarVantagem
+);
+
+$("cancelar-edicao-vantagem").addEventListener(
+    "click", limparFormularioVantagem
 );
 
