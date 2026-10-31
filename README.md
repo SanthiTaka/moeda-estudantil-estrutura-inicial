@@ -4,6 +4,12 @@
 **Disciplina:** Laboratório de Desenvolvimento de Software / Projeto de Software  
 **Entrega:** Sprint 03 — Protótipo, arquitetura MVC, persistência e demonstração
 
+## Integrantes / Equipe
+
+* **Aluno:** Pedro Augusto Periceles 
+* **Aluno:** Santhiago Takaesu
+* **Orientadora / Professora:** Milena Menezes Adão
+
 ## 📖 Sobre o projeto
 
 O **Sistema de Moeda Estudantil** é uma aplicação web que incentiva o desempenho e a participação acadêmica por meio de moedas virtuais. Professores recebem uma cota de moedas a cada semestre e podem concedê-las a alunos como reconhecimento por atividades e conquistas. Os alunos acumulam moedas e as utilizam para resgatar vantagens oferecidas por empresas parceiras.
